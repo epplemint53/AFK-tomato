@@ -1,0 +1,24 @@
+{
+    "name": "afk-tomato",
+    "version": "1.0.0",
+    "description": "made by epplemint1",
+    "license": "ISC",
+    "author": "",
+    "type": "commonjs",
+    "main": "index.js",
+
+    "scripts": {
+        "start": "node index.js"
+    },
+
+    "engines": {
+        "node": "20.x"
+    },
+
+    "dependencies": {
+        "discord.js": "^14.25.1",
+        "@discordjs/voice": "^0.18.0",
+        "@discordjs/opus": "^0.10.0",
+        "@snazzah/davey": "^0.1.9"
+    }
+}
