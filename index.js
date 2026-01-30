@@ -7,7 +7,10 @@ const {
     createAudioResource,
     AudioPlayerStatus,
     NoSubscriberBehavior,
+    StreamType,
 } = require("@discordjs/voice");
+
+const { Readable } = require("stream");
 
 const client = new Client({
     intents: [
@@ -31,17 +34,29 @@ client.once("ready", () => {
 });
 
 /* =====================
-   무음(or 노래) 재생 함수
+   무음 PCM 스트림 생성
+===================== */
+function createSilentAudioStream() {
+    return new Readable({
+        read() {
+            // 20ms 분량 무음 PCM
+            // 48000Hz * 2채널 * 2바이트 * 0.02초 = 3840
+            this.push(Buffer.alloc(3840));
+        },
+    });
+}
+
+/* =====================
+   무음 재생 함수
 ===================== */
 function playAudio() {
     if (!player) return;
 
-    const resource = createAudioResource("silence.mp3", {
-        inlineVolume: true,
-    });
+    const silentStream = createSilentAudioStream();
 
-    // 🔊 볼륨 조절 (필요하면 숫자 바꿔)
-    resource.volume.setVolume(0.05);
+    const resource = createAudioResource(silentStream, {
+        inputType: StreamType.Raw,
+    });
 
     player.play(resource);
 }
@@ -52,10 +67,18 @@ function playAudio() {
 client.on("messageCreate", (message) => {
     if (message.author.bot) return;
     if (message.content !== "!join") return;
-    if (connection) return; // 이미 들어가 있으면 무시
+
+    // 🔒 이미 어디든 연결 중이면 무시
+    if (connection) {
+        console.log("이미 음성 채널에 연결 중 → !join 무시");
+        return;
+    }
 
     const vc = message.member.voice.channel;
-    if (!vc) return;
+    if (!vc) {
+        message.reply("먼저 음성 채널에 들어가 있어야 함");
+        return;
+    }
 
     fixedChannelId = vc.id;
     joinedAt = Date.now();
@@ -74,15 +97,13 @@ client.on("messageCreate", (message) => {
     });
 
     connection.subscribe(player);
-
     playAudio();
 
-    // 🎧 재생 끝나면 새 resource로 다시 재생
     player.on(AudioPlayerStatus.Idle, () => {
         playAudio();
     });
 
-    console.log("🎧 음성 채널 입장 완료");
+    console.log(`🎧 ${vc.name} 채널로 입장`);
 });
 
 /* =====================
